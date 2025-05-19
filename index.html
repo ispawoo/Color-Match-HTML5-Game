@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Color Tile Match Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 30px;
+        }
+        .game-container {
+            display: inline-block;
+            margin: 20px;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            margin: 20px auto;
+        }
+        .tile {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            background-color: #eee;
+        }
+        .tile:hover {
+            background-color: #ddd;
+        }
+        .color-options {
+            margin: 20px;
+        }
+        .color-option {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+        .status {
+            font-size: 24px;
+            margin: 20px;
+            font-weight: bold;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Color Tile Match Game</h1>
+    <div class="game-container">
+        <div class="status" id="status">Your turn - Select a color</div>
+        <div class="color-options">
+            <div class="color-option" style="background-color: red;" onclick="selectColor('red')"></div>
+            <div class="color-option" style="background-color: blue;" onclick="selectColor('blue')"></div>
+            <div class="color-option" style="background-color: green;" onclick="selectColor('green')"></div>
+            <div class="color-option" style="background-color: yellow;" onclick="selectColor('yellow')"></div>
+        </div>
+        <div class="game-board" id="gameBoard"></div>
+        <button onclick="resetGame()">Reset Game</button>
+    </div>
+
+    <script>
+        const boardSize = 3;
+        let board = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+        let currentPlayer = 'human'; // 'human' or 'computer'
+        let selectedColor = null;
+        let gameOver = false;
+
+        // Initialize the game board
+        function initializeBoard() {
+            const gameBoard = document.getElementById('gameBoard');
+            gameBoard.innerHTML = '';
+            
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    tile.dataset.row = row;
+                    tile.dataset.col = col;
+                    tile.onclick = () => makeMove(row, col);
+                    updateTileAppearance(tile, row, col);
+                    gameBoard.appendChild(tile);
+                }
+            }
+        }
+
+        // Update tile appearance based on board state
+        function updateTileAppearance(tile, row, col) {
+            if (board[row][col]) {
+                tile.style.backgroundColor = board[row][col];
+                tile.textContent = '';
+            } else {
+                tile.style.backgroundColor = '#eee';
+                tile.textContent = '';
+            }
+        }
+
+        // Select a color for the human player
+        function selectColor(color) {
+            if (currentPlayer === 'human' && !gameOver) {
+                selectedColor = color;
+                document.getElementById('status').textContent = `Selected ${color} - Click on a tile`;
+            }
+        }
+
+        // Human player makes a move
+        function makeMove(row, col) {
+            if (gameOver || currentPlayer !== 'human' || board[row][col] !== null || !selectedColor) {
+                return;
+            }
+            
+            board[row][col] = selectedColor;
+            updateBoard();
+            
+            if (checkWin()) {
+                document.getElementById('status').textContent = 'You win!';
+                gameOver = true;
+                return;
+            }
+            
+            if (checkDraw()) {
+                document.getElementById('status').textContent = 'Game ended in a draw!';
+                gameOver = true;
+                return;
+            }
+            
+            currentPlayer = 'computer';
+            document.getElementById('status').textContent = 'Computer thinking...';
+            
+            // Computer makes a move after a short delay
+            setTimeout(computerMove, 1000);
+        }
+
+        // Computer makes a move (simple AI)
+        function computerMove() {
+            if (gameOver) return;
+            
+            // Find all empty cells
+            const emptyCells = [];
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
+                    if (board[row][col] === null) {
+                        emptyCells.push({row, col});
+                    }
+                }
+            }
+            
+            if (emptyCells.length > 0) {
+                // Simple AI: choose random color and random empty cell
+                const colors = ['red', 'blue', 'green', 'yellow'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                
+                board[randomCell.row][randomCell.col] = randomColor;
+                updateBoard();
+                
+                if (checkWin()) {
+                    document.getElementById('status').textContent = 'Computer wins!';
+                    gameOver = true;
+                    return;
+                }
+                
+                if (checkDraw()) {
+                    document.getElementById('status').textContent = 'Game ended in a draw!';
+                    gameOver = true;
+                    return;
+                }
+            }
+            
+            currentPlayer = 'human';
+            selectedColor = null;
+            document.getElementById('status').textContent = 'Your turn - Select a color';
+        }
+
+        // Update the visual board
+        function updateBoard() {
+            const tiles = document.querySelectorAll('.tile');
+            tiles.forEach(tile => {
+                const row = parseInt(tile.dataset.row);
+                const col = parseInt(tile.dataset.col);
+                updateTileAppearance(tile, row, col);
+            });
+        }
+
+        // Check for a win
+        function checkWin() {
+            // Check rows
+            for (let row = 0; row < boardSize; row++) {
+                if (board[row][0] && board[row][0] === board[row][1] && board[row][0] === board[row][2]) {
+                    return true;
+                }
+            }
+            
+            // Check columns
+            for (let col = 0; col < boardSize; col++) {
+                if (board[0][col] && board[0][col] === board[1][col] && board[0][col] === board[2][col]) {
+                    return true;
+                }
+            }
+            
+            // Check diagonals
+            if (board[0][0] && board[0][0] === board[1][1] && board[0][0] === board[2][2]) {
+                return true;
+            }
+            if (board[0][2] && board[0][2] === board[1][1] && board[0][2] === board[2][0]) {
+                return true;
+            }
+            
+            return false;
+        }
+
+        // Check for a draw
+        function checkDraw() {
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
+                    if (board[row][col] === null) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Reset the game
+        function resetGame() {
+            board = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+            currentPlayer = 'human';
+            selectedColor = null;
+            gameOver = false;
+            document.getElementById('status').textContent = 'Your turn - Select a color';
+            initializeBoard();
+        }
+
+        // Initialize the game when the page loads
+        window.onload = initializeBoard;
+    </script>
+</body>
+</html>
